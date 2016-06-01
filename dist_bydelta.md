@@ -39,4 +39,5 @@ if True:
         i -= 0.25
     plt.show()
 ```
-![image of graph](C:/Users/Juan/Desktop/figure_1.png)
+![image of graph](https://cloud.githubusercontent.com/assets/14933405/15727665/1c345d62-2826-11e6-9c60-71db0f3a27ea.png)
+
