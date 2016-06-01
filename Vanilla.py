@@ -1,0 +1,170 @@
+import basic_pricer
+import backtest
+import matplotlib.pyplot as plt
+from math import *
+
+class Van(object):
+    'BS Vanilla option pricing'
+
+    def __init__(self, spot, strike, vol, expiry, is_call = True, rate_dom = 0.0,
+                 rate_for = 0.0, is_prem_for = False):
+        self.spot = spot
+        self.strike = strike
+        self.vol = vol
+        self.expiry = expiry
+        self.is_call = is_call
+        self.rate_dom = rate_dom
+        self.rate_for = rate_for
+        self.is_prem_for = is_prem_for
+        self.fwd = spot * basic_pricer.df(rate_dom,expiry) / basic_pricer.df(rate_for,expiry)
+
+    def bs_price(self):
+        return basic_pricer.bs_price(self.spot, self.strike, self.vol, self.expiry, self.is_call,
+                                     self.rate_dom, self.rate_for, self.is_prem_for)
+    def bs_price_vol(self, vol):
+        return basic_pricer.bs_price(self.spot, self.strike, vol, self.expiry, self.is_call,
+                                     self.rate_dom, self.rate_for, self.is_prem_for)
+
+    def bs_call(self):
+        return basic_pricer.bs_call(self.spot, self.strike, self.vol, self.expiry, self.rate_dom,
+                                    self.rate_for, self.is_prem_for)
+    
+    def bs_put(self):
+        return basic_pricer.bs_put(self.spot, self.strike, self.vol, self.expiry, self.rate_dom,
+                                    self.rate_for, self.is_prem_for)
+
+    def delta(self, is_call = True):
+        return abs(basic_pricer.bs_delta(self.spot, self.strike, self.vol, self.expiry, is_call,
+                                     self.rate_dom, self.rate_for))
+    def imp_vol(self, price):
+        return basic_pricer.implied_vol_bs(price, self.spot, self.strike, self.expiry, self.is_call,
+                                           self.rate_dom, self.rate_for, self.is_prem_for)
+    def be_vol(self, spot_series, hedge_vol):
+        return backtest.breakeven_vol(spot_series, self.strike, hedge_vol, self.expiry,
+                                      self.rate_dom, self.rate_for)
+
+    def realized_pl(self, spot_series, notional, hedge_vol):
+        return backtest.realized_pl(spot_series, notional, self.strike, self.vol, self.expiry,
+                                    self.rate_dom, self.rate_for, hedge_vol, self.is_call)
+        
+    def sim_vol(self, sim_func, num_sims, num_steps_day, hedge_vol):
+        ''' runs multiple simulators thru sim_func and returns array of all be_vols for this particular option'''
+        bevols =[]
+        for i in range(0,num_sims):
+            prices = sim_func(self.spot, self.vol, self.expiry, 0.00, int(num_steps_day*self.expiry*365))
+            bevols.append(self.be_vol(prices, hedge_vol)*100)
+        return bevols
+    
+    def sim_pl(self, sim_func, num_sims, num_steps_day, notional, hedge_vol):
+        real_pl =[]
+        for i in range(0,num_sims):
+            prices = sim_func(self.spot, self.vol, self.expiry, 0.00, int(num_steps_day*self.expiry*365))
+            real_pl.append(self.realized_pl(prices, notional, hedge_vol))
+        return real_pl
+    
+    def __str__(self):
+        a = 'strike: %7.4f --  spot: %7.4f' %(self.strike, self.spot)
+        b = 'expiry: %7.4f --  vol: %7.2f%%' %(self.expiry, self.vol*100)
+        c = 'dom IR: %6.2f%% --  for IR: %4.2f%%' %(self.rate_dom*100, self.rate_for*100)
+        d = 'fwd:    %7.4f' %(self.fwd)
+        e = '%4.1fD CALL --> premium: %6.2f bps' %(self.delta(True)*100, self.bs_call()*10000)
+        f = '%4.1fD PUT  --> premium: %6.2f bps' %(self.delta(False)*100, self.bs_put()*10000)
+        return (a +'\n'+ b +'\n' + c + '\n' + d + '\n' + e + '\n' + f)
+    
+    
+class Realized(object):
+
+    def __init__(self, spot_series, start, end, rate_dom = 0.00, rate_for = 0.00):
+        self.spot_series = spot_series
+        self.start = start
+        self.end = end
+        self.rate_dom = rate_dom
+        self.rate_for = rate_for
+
+    def real_pl(self, notional, strike, vol, hedge_vol, is_call = True):
+        return backtest.realized_pl(self.spot_series, notional, strike, vol, self.start - self.end,
+                                    self.rate_dom, self.rate_for, hedge_vol, is_call)
+
+    def be_vol(self, strike, hedge_vol, is_call = True):
+        return backtest.breakeven_vol(self.spot_series, strike, hedge_vol, self.start - self.end,
+                                      self.rate_dom, self.rate_for)
+
+    def be_curve(self,low_strike,high_strike,hedge_vol, num_k = 20, plots = True):
+        curve_dict = {}
+        inc = (high_strike-low_strike)/num_k
+        for i in range(0,num_k+1):
+            strike = low_strike + inc*i
+            temp = self.be_vol(strike,hedge_vol)
+            curve_dict[strike] = temp*100
+        if plots:
+            plt.figure(1)
+            plt.subplot(211)
+            plt.scatter(list(curve_dict.keys()),list(curve_dict.values()))
+            miny = min(list(curve_dict.values()))
+            if miny < 0:
+                miny = -abs(miny*1.1)
+            else:
+                miny = miny*0.9
+            maxy = max(list(curve_dict.values()))*1.1
+            plt.plot([self.spot_series[-1], self.spot_series[-1]],[miny,maxy],'k-',linewidth=1.3)
+            plt.plot([low_strike,high_strike],[self.real_vol()*100, self.real_vol()*100],'r--',linewidth=1.2)
+            plt.axis([low_strike,high_strike,miny,maxy])
+            plt.subplot(212)
+            plt.plot(self.spot_series)
+            plt.axis([0,len(self.spot_series), min(self.spot_series)*0.995,max(self.spot_series)*1.005])
+            plt.show()
+        return curve_dict
+
+    ' dont need to pass strike limits, auto calculated depending on vol and series '
+    def be_curve_auto(self, hedge_vol, num_k = 20, plots = True):
+        expiry = self.start - self.end
+        low_strike = min(self.spot_series[0]*(1-2*hedge_vol*sqrt(expiry)),min(self.spot_series)*0.99)
+        high_strike = max(self.spot_series[0]*(1+2*hedge_vol*sqrt(expiry)),max(self.spot_series)*1.01)
+        curve_dict = self.be_curve(low_strike, high_strike, hedge_vol, num_k, plots)
+        return curve_dict
+
+    def be_curve_mult_vol(self, low_strike, high_strike, hedge_vol, num_k = 20):
+        inc = (high_strike-low_strike)/num_k
+        h_vols = [hedge_vol*0.9, hedge_vol, hedge_vol*1.1]
+        vv = []
+        for v in h_vols:
+            strikes = []
+            vols = []
+            for i in range(0,num_k+1):
+                strike = low_strike + inc*i
+                strikes.append(strike)
+                temp = self.be_vol(strike,v)
+                vols.append(100*temp)
+            vv.append(vols)
+        plt.figure(1)
+        plt.subplot(211)
+        miny = min(min(vv[0]), min(vv[1]), min(vv[2]))
+        maxy = max(max(vv[0]), max(vv[1]), max(vv[2])) * 1.05
+        if miny < 0:
+            miny = -abs(miny*1.05)
+        else:
+            miny = miny*0.95
+        plt.axis([low_strike,high_strike,miny,maxy])
+        plt.plot([self.spot_series[-1], self.spot_series[-1]],[miny,maxy],'k-',linewidth=1.3)
+        plt.plot([low_strike,high_strike],[self.real_vol()*100, self.real_vol()*100],'r--',linewidth=1.2)
+        label1 = 'vol down - %5.2f'%(h_vols[0]*100)
+        label2 = 'hedge vol - %5.2f'%(h_vols[1]*100)
+        label3 = 'vol up - %5.2f'%(h_vols[2]*100)
+        plt.scatter(strikes, vv[0],c='blue',edgecolor='blue', alpha = 0.7, label=label1)
+        plt.scatter(strikes, vv[1],c='grey',edgecolor='grey', alpha = 0.7, label=label2)
+        plt.scatter(strikes, vv[2],c='red',edgecolor='red', alpha = 0.7, label=label3)
+        plt.axis([low_strike,high_strike,miny,maxy])
+        plt.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3, ncol=3, mode="expand", borderaxespad=0.)
+        #plt.legend(bbox_to_anchor=(1.005, 1), loc=2, borderaxespad=0.)
+        plt.grid(True)
+        plt.subplot(212)
+        plt.plot(self.spot_series)
+        plt.axis([0,len(self.spot_series), min(self.spot_series)*0.995,max(self.spot_series)*1.005])
+        plt.show()
+        return (strikes,vv)
+
+    def real_vol(self):
+        rv = basic_pricer.realized_vol(self.spot_series, self.start, self.end)
+        return rv
+
+
