@@ -14,12 +14,12 @@ import numpy as np
  prices are simulated under BS assumptions (normal returns) '''
 
 spot = 1.00
-vol = 0.12
-hedge_vol = 0.12
+vol = 0.15
+hedge_vol = 0.15
 expiry = 1/365
 notional = 1000000.00
 hedge_day = 144
-num_sims = 10000
+num_sims = 30000
 
 if True:
     i = 0.75
@@ -63,5 +63,14 @@ if True:
     plt.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3, ncol=3, mode="expand", borderaxespad=0.)
     plt.show()
  ```
+again as expected no matter what hedge vol we used the expected breakeven vol will always be the realized vol, and as expected the returns with the lowest variance are attained when using the actual realized vol to delta hedge.
+what I find a bit surprising is the skew of the returns, when using a lower vol (which will result in more delta hedging) has a skew to the right, as in most of the time b.e. vol will be lower than avg. opposite when using a higher vol.
+important to realize that only thing you can do is change the shape of returns, expected returns cannot be changed by hedging strategy.
+and for lower delta options then the skew is even more pronunced
+i believe the reason for the skew for higher hedge vols you hold more delta against strikes as you start getting pinned, so b.e. will be much lower 
 
+returns for ATMF options
 ![image of dist by hedge vol](https://cloud.githubusercontent.com/assets/14933405/15734335/8a2ad43c-285c-11e6-8d5e-8655469a1d78.png)
+
+returns for 25d options
+![image of dist by hedge vol for 25d](https://cloud.githubusercontent.com/assets/14933405/15734611/8d34cd92-285f-11e6-864d-735f118f9a2a.png)
