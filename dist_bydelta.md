@@ -6,7 +6,6 @@ import matplotlib.pyplot as plt
 import simulator
 import numpy as np
 ```
-testing 
 
 ```python
 
@@ -39,5 +38,30 @@ if True:
         i -= 0.25
     plt.show()
 ```
-![image of graph](https://cloud.githubusercontent.com/assets/14933405/15727665/1c345d62-2826-11e6-9c60-71db0f3a27ea.png)
+lower delta options will have wider distributions, but all of them will be centered around the realized vol, which is also the hedge vol. 
 
+![image of dist by delta](https://cloud.githubusercontent.com/assets/14933405/15734135/55c59058-285a-11e6-8e16-d6a7077910db.png)
+
+```python
+if True:
+    strike = spot
+    call1 = Van(spot, strike, vol, expiry)
+    hv = 0.10
+    hvs = []
+    bevols = []
+    while hv < 0.21:
+        print(hv)
+        res = np.array(call1.sim_vol(simulator.rand_sim,num_sims, hedge_day, hv))
+        print('mean: %8.4f ' %(np.mean(res)))
+        print('stdev: %7.4f '%(np.std(res)))
+        hvs.append(hv)
+        bevols.append(np.std(res))
+        label1 = 'hvol:%3.1f%%  mean:%4.2f  std:%4.2f'%(hv*100, np.mean(res),np.std(res))
+        hv += 0.05
+        plt.hist(res,bins=60,normed=1,alpha=0.5,label=label1)
+    #plt.plot(hvs,bevols)
+    plt.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3, ncol=3, mode="expand", borderaxespad=0.)
+    plt.show()
+ ```
+
+![image of dist by hedge vol](https://cloud.githubusercontent.com/assets/14933405/15734335/8a2ad43c-285c-11e6-8d5e-8655469a1d78.png)
