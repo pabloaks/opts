@@ -61,4 +61,3 @@ def breakeven_vol(spot_series, strike, hedge_vol, expiry, rate_dom, rate_for):
         be_vol = -basic_pricer.implied_vol_bs(-option_premium, spot_series[0], strike, expiry,
                                              is_call, rate_dom, rate_for)
     return be_vol
-
