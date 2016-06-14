@@ -1,4 +1,4 @@
-import basic_pricer
+import basic_pricer as bp
 import numpy as np
 from math import *
 import Event_Gap
@@ -8,7 +8,7 @@ class Skew(object):
 
     def __init__(self, spot, expiry, ir_d, ir_f, atm_vol, rr_25, rr_10, fly_25, fly_10):
         self.spot = spot
-        self.fwd = spot * basic_pricer.df(ir_d,expiry) / basic_pricer.df(ir_f,expiry)
+        self.fwd = spot * bp.df(ir_d,expiry) / bp.df(ir_f,expiry)
         self.expiry = expiry
         self.ir_d = ir_d
         self.ir_f = ir_f
@@ -21,10 +21,10 @@ class Skew(object):
         self.put_25 = atm_vol + fly_25 - rr_25/2.0
         self.call_10 = atm_vol + fly_10 + rr_10/2.0
         self.put_10 = atm_vol + fly_10 - rr_10/2.0
-        self.call_25_k = basic_pricer.bs_strike(spot, 0.25, self.call_25, expiry, True, ir_d, ir_f)
-        self.call_10_k = basic_pricer.bs_strike(spot, 0.10, self.call_10, expiry, True, ir_d, ir_f)
-        self.put_25_k = basic_pricer.bs_strike(spot, 0.25, self.put_25, expiry, False, ir_d, ir_f)
-        self.put_10_k = basic_pricer.bs_strike(spot, 0.10, self.put_10, expiry, False, ir_d, ir_f)
+        self.call_25_k = bp.bs_strike(spot, 0.25, self.call_25, expiry, True, ir_d, ir_f)
+        self.call_10_k = bp.bs_strike(spot, 0.10, self.call_10, expiry, True, ir_d, ir_f)
+        self.put_25_k = bp.bs_strike(spot, 0.25, self.put_25, expiry, False, ir_d, ir_f)
+        self.put_10_k = bp.bs_strike(spot, 0.10, self.put_10, expiry, False, ir_d, ir_f)
         self.fitted = self.fit_skew()
 
     def fit_skew(self):
@@ -55,7 +55,7 @@ class Skew(object):
     def test_skew(self):
         vols_i = [self.put_10, self.put_25, self.atm_vol, self.call_25, self.call_10]
         strikes_i = [self.put_10_k, self.put_25_k, self.fwd, self.call_25_k, self.call_10_k]
-        low_k = max(0,self.fwd*(1 - 2.0*self.atm_vol*sqrt(self.expiry)))
+        low_k = max(0, self.fwd*(1 - 2.0*self.atm_vol*sqrt(self.expiry)))
         high_k = self.fwd*(1 + 2.0*self.atm_vol*sqrt(self.expiry))
         strikes = []
         vols =[]
@@ -63,8 +63,8 @@ class Skew(object):
             strike = low_k + (high_k - low_k)/100*i
             strikes.append(strike)
             vols.append(self.get_vol(strike))
-        plt.scatter(strikes,vols,alpha=0.6)
-        plt.scatter(strikes_i,vols_i,c='red',edgecolor='red')
+        plt.scatter(strikes, vols, alpha=0.6)
+        plt.scatter(strikes_i, vols_i, c='red', edgecolor='red')
         plt.show()
         return True
         
@@ -81,7 +81,7 @@ class Skew(object):
         while ((high_k - low_k) >= epsilon) and i < 100:
             mid_k = (high_k + low_k)/2.0
             vol_mid = self.get_vol(mid_k)
-            mid_delta = abs(basic_pricer.bs_delta(self.spot, mid_k, vol_mid, self.expiry, is_call,
+            mid_delta = abs(bp.bs_delta(self.spot, mid_k, vol_mid, self.expiry, is_call,
                                                   self.ir_d, self.ir_f))
             if (mid_delta > delta):
                 if is_call:
@@ -150,7 +150,6 @@ class Vol_mkt(object):
                           self.fly_25[i]*100, self.fly_10[i]*100, self.ir_d[i]*100, self.ir_f[i]*100)
         return header+ mkt_info
 
-
 '''
 ###
 spot = 1
@@ -171,9 +170,9 @@ fly_10 = 1.50/100
 ##fly_10 = 0.0/100
 t1 = Skew( spot, expiry, ir_d, ir_f, atm_vol, rr_25, rr_10, fly_25, fly_10)
 
-#print(t1.get_strike(0.25, True))
-#print(t1)
-#print(t1.get_vol(10.0))
+print(t1.get_strike(0.25, True))
+print(t1)
+print(t1.get_vol(10.0))
 
 eg = Event_Gap.implied_gap(strike, spot, expiry, ir_d, ir_f, curr_vol, atm_vol)
 egb = Event_Gap.implied_gap(strike, spot, expiry, ir_d, ir_f, curr_vol, atm_vol, 2.0)
@@ -206,3 +205,5 @@ print(vol3*100)
 ##print(t2)
 ##print(mm)
 '''
+
+
