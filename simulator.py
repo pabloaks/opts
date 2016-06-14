@@ -30,4 +30,7 @@ def rand_sim(spot,vol,start,end, num):
     for i in range(0,num):
         prices.append(prices[i]*(1+norm_CDF_inv(random.random())*vol*sqrt((start-end)/num)))
     return prices
-    
+   
+
+print('hi')
+
