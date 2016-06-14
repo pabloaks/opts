@@ -6,46 +6,46 @@ from math import *
 class Van(object):
     'BS Vanilla option pricing'
 
-    def __init__(self, spot, strike, vol, expiry, is_call = True, rate_dom = 0.0,
-                 rate_for = 0.0, is_prem_for = False):
+    def __init__(self, spot, strike, vol, expiry, is_call = True, ir_d = 0.0,
+                 ir_f = 0.0, is_prem_for = False):
         self.spot = spot
         self.strike = strike
         self.vol = vol
         self.expiry = expiry
         self.is_call = is_call
-        self.rate_dom = rate_dom
-        self.rate_for = rate_for
+        self.ir_d = ir_d
+        self.ir_f = ir_f
         self.is_prem_for = is_prem_for
-        self.fwd = spot * basic_pricer.df(rate_dom,expiry) / basic_pricer.df(rate_for,expiry)
+        self.fwd = spot * basic_pricer.df(ir_d,expiry) / basic_pricer.df(ir_f,expiry)
 
     def bs_price(self):
         return basic_pricer.bs_price(self.spot, self.strike, self.vol, self.expiry, self.is_call,
-                                     self.rate_dom, self.rate_for, self.is_prem_for)
+                                     self.ir_d, self.ir_f, self.is_prem_for)
     def bs_price_vol(self, vol):
         return basic_pricer.bs_price(self.spot, self.strike, vol, self.expiry, self.is_call,
-                                     self.rate_dom, self.rate_for, self.is_prem_for)
+                                     self.ir_d, self.ir_f, self.is_prem_for)
 
     def bs_call(self):
-        return basic_pricer.bs_call(self.spot, self.strike, self.vol, self.expiry, self.rate_dom,
-                                    self.rate_for, self.is_prem_for)
+        return basic_pricer.bs_call(self.spot, self.strike, self.vol, self.expiry, self.ir_d,
+                                    self.ir_f, self.is_prem_for)
     
     def bs_put(self):
-        return basic_pricer.bs_put(self.spot, self.strike, self.vol, self.expiry, self.rate_dom,
-                                    self.rate_for, self.is_prem_for)
+        return basic_pricer.bs_put(self.spot, self.strike, self.vol, self.expiry, self.ir_d,
+                                    self.ir_f, self.is_prem_for)
 
     def delta(self, is_call = True):
         return abs(basic_pricer.bs_delta(self.spot, self.strike, self.vol, self.expiry, is_call,
-                                     self.rate_dom, self.rate_for))
+                                     self.ir_d, self.ir_f))
     def imp_vol(self, price):
         return basic_pricer.implied_vol_bs(price, self.spot, self.strike, self.expiry, self.is_call,
-                                           self.rate_dom, self.rate_for, self.is_prem_for)
+                                           self.ir_d, self.ir_f, self.is_prem_for)
     def be_vol(self, spot_series, hedge_vol):
         return backtest.breakeven_vol(spot_series, self.strike, hedge_vol, self.expiry,
-                                      self.rate_dom, self.rate_for)
+                                      self.ir_d, self.ir_f)
 
     def realized_pl(self, spot_series, notional, hedge_vol):
         return backtest.realized_pl(spot_series, notional, self.strike, self.vol, self.expiry,
-                                    self.rate_dom, self.rate_for, hedge_vol, self.is_call)
+                                    self.ir_d, self.ir_f, hedge_vol, self.is_call)
         
     def sim_vol(self, sim_func, num_sims, num_steps_day, hedge_vol):
         ''' runs multiple simulators thru sim_func and returns array of all be_vols for this particular option'''
@@ -65,7 +65,7 @@ class Van(object):
     def __str__(self):
         a = 'strike: %7.4f --  spot: %7.4f' %(self.strike, self.spot)
         b = 'expiry: %7.4f --  vol: %7.2f%%' %(self.expiry, self.vol*100)
-        c = 'dom IR: %6.2f%% --  for IR: %4.2f%%' %(self.rate_dom*100, self.rate_for*100)
+        c = 'dom IR: %6.2f%% --  for IR: %4.2f%%' %(self.ir_d*100, self.ir_f*100)
         d = 'fwd:    %7.4f' %(self.fwd)
         e = '%4.1fD CALL --> premium: %6.2f bps' %(self.delta(True)*100, self.bs_call()*10000)
         f = '%4.1fD PUT  --> premium: %6.2f bps' %(self.delta(False)*100, self.bs_put()*10000)
@@ -74,20 +74,20 @@ class Van(object):
     
 class Realized(object):
 
-    def __init__(self, spot_series, start, end, rate_dom = 0.00, rate_for = 0.00):
+    def __init__(self, spot_series, start, end, ir_d = 0.00, ir_f = 0.00):
         self.spot_series = spot_series
         self.start = start
         self.end = end
-        self.rate_dom = rate_dom
-        self.rate_for = rate_for
+        self.ir_d = ir_d
+        self.ir_f = ir_f
 
     def real_pl(self, notional, strike, vol, hedge_vol, is_call = True):
         return backtest.realized_pl(self.spot_series, notional, strike, vol, self.start - self.end,
-                                    self.rate_dom, self.rate_for, hedge_vol, is_call)
+                                    self.ir_d, self.ir_f, hedge_vol, is_call)
 
     def be_vol(self, strike, hedge_vol, is_call = True):
         return backtest.breakeven_vol(self.spot_series, strike, hedge_vol, self.start - self.end,
-                                      self.rate_dom, self.rate_for)
+                                      self.ir_d, self.ir_f)
 
     def be_curve(self,low_strike,high_strike,hedge_vol, num_k = 20, plots = True):
         curve_dict = {}
@@ -146,7 +146,7 @@ class Realized(object):
             miny = miny*0.95
         plt.axis([low_strike,high_strike,miny,maxy])
         plt.plot([self.spot_series[-1], self.spot_series[-1]],[miny,maxy],'k-',linewidth=1.3)
-        plt.plot([low_strike,high_strike],[self.real_vol()*100, self.real_vol()*100],'r--',linewidth=1.2)
+        plt.plot([low_strike,high_strike],[self.real_vol()*100, self.real_vol()*100],'k--',linewidth=1.5)
         label1 = 'vol down - %5.2f'%(h_vols[0]*100)
         label2 = 'hedge vol - %5.2f'%(h_vols[1]*100)
         label3 = 'vol up - %5.2f'%(h_vols[2]*100)
@@ -166,5 +166,3 @@ class Realized(object):
     def real_vol(self):
         rv = basic_pricer.realized_vol(self.spot_series, self.start, self.end)
         return rv
-
-
