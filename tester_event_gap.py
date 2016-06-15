@@ -1,6 +1,6 @@
 import Event_Gap 
 import basic_pricer
-from Vol_Market import Skew
+from Vol_Market import Skew, Vol_mkt
 from Event_Gap import Event, Event_Skew
 
 ## market inputs
@@ -86,7 +86,7 @@ if False:
     pre_vol2 = Event_Gap.gap_vol_skew(strike, t1, eg4, up_factor)
     print('\npre vol: %.2f%% \ncurr vol: %.2f%%'%(100*pre_vol2, 100*curr_vol))
 
-if True:
+if False:
     ' test Event object '
     ev1 = Event(spot, strike, expiry, curr_vol, atm_vol, up_factor , ir_d, ir_f)
     ev2 = Event_Skew(strike, curr_vol, t1, up_factor)
@@ -110,4 +110,28 @@ if True:
     print('\n\n')
     print(ev2)
 
-    
+' test vol market and interp in there '
+if True:
+    spot = 1.00
+    strike = 1.00
+    expiry = 10/365.0
+    ir_d = 0.0
+    ir_f = 0.0
+    atm_vol = 0.12
+    curr_vol = 0.14
+    rr_25 = 1.00/100
+    rr_10 = 2.00/100
+    fly_25 = 0.25/100
+    fly_10 = 1.00/100
+    expiry = [1/365, 7/365, 30/365]
+    atmf = [0.10, 0.1025, 0.1075]
+    ir_d = [0.0, 0.0, 0.0]
+    ir_f = [0.0, 0.0, 0.0]
+    rr_25 = [1.25/100, 1.5/100, 2.0/100]
+    rr_10 = [2.25/100, 2.75/100, 3.5/100]
+    fly_25 = [0.25/100, 0.3/100, 0.40/100]
+    fly_10 = [0.75/100, 0.9/100, 1.25/100]
+    mm = Vol_mkt(spot, expiry, atmf, rr_25, rr_10, fly_25, fly_10, ir_d, ir_f)
+    t2 = mm.interp_skew(7/365)
+    print(t2)
+    print(mm)
