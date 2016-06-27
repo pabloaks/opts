@@ -33,7 +33,7 @@ def implied_gap(k, spot, expiry, ir_d, ir_f, curr_v, base_v, up_fact=1.0):
     p_d = 1.0 - p_u
     curr_prem = bp.bs_str(spot, k, curr_v, expiry, ir_d, ir_f)
     gap_low = 0.0
-    gap_high = curr_v*sqrt(2.0*expiry/pi)*1.1*max(1,1.0/up_fact)
+    gap_high = curr_v*sqrt(3.0*expiry/pi)*1.1*max(1,1.0/up_fact)
     ## for low strikes can potentially pass a -ve strike in bs_str()
     ## for very high up_factor, so need to be careful,
     ## and way to control it is with gap_high /// (looks ok now)
@@ -65,7 +65,7 @@ def implied_gap_skew(k, curr_v, post_skew, up_fact=1.0):
     ir_f = post_skew.ir_f
     curr_prem = bp.bs_str(spot, k, curr_v, expiry, ir_d, ir_f)
     gap_low = 0.0
-    gap_high = curr_v*sqrt(2.0*expiry/pi)*1.1*max(up_fact,1.0/up_fact)
+    gap_high = curr_v*sqrt(3.0*expiry/pi)*1.1*max(1,1.0/up_fact)
     mid_gap = (gap_low + gap_high) / 2.0
     epsilon = 0.000000001
     i = 0
@@ -85,6 +85,32 @@ def implied_gap_skew(k, curr_v, post_skew, up_fact=1.0):
             gap_low = mid_gap
         i += 1
     return mid_gap
+
+def post_vol(k, spot, expiry, ir_d, ir_f, pre_v, egap, up_fact=1.0):
+    ''' calculates post vol
+    '''
+    ## need to add check for prem(pre_v) > gap
+    p_u = 1.0 / (1.0 + up_fact)
+    p_d = 1.0 - p_u
+    prem_b = bp.bs_str(spot, k, pre_v, expiry, ir_d, ir_f)
+    vol_low = 0.0
+    vol_high = 10*pre_v
+    mid_vol = (vol_low + vol_high) / 2.0
+    epsilon = 0.000000001
+    i = 0
+    while ((vol_high - vol_low) >= epsilon) and i < 100:
+        mid_vol = (vol_low + vol_high) / 2.0
+        temp_prem = (bp.bs_str(spot, k*(1 + egap), mid_vol, expiry, ir_d, ir_f)
+                     *p_d +
+                     p_u*bp.bs_str(spot, k*(1 - egap*up_fact), mid_vol, expiry,
+                                   ir_d, ir_f))
+        if temp_prem > prem_b:
+            vol_high = mid_vol
+        else:
+            vol_low = mid_vol
+        i += 1
+    return mid_vol
+    
 
 def gap_vol(k, spot, expiry, ir_d, ir_f, base_v, egap, up_fact=1.0):
     ''' calculates pre vol assuming we know gap and post vol 
@@ -153,6 +179,24 @@ class Event(object):
             up_factor = self.up_factor
         return gap_vol(self.strike, self.spot, self.expiry, self.ir_d,
                        self.ir_f, self.base_vol, gap, up_factor)
+
+        '''  def post_vol_smile(self, pre_skew, num_k=10, up_factor=88.8, plot=True, over_gap=88.8):
+        low_k = self.fwd*(1 - 2*self.curr_vol*sqrt(self.expiry))
+        inc = (self.fwd - low_k)/num_k
+        strikes = []
+        vols = []
+        if up_factor == 88.8:
+            up_factor = self.up_factor
+        for i in range(num_k*2 + 1):
+            strikes.append(low_k + inc*i)
+        if over_gap == 88.8:
+            strike_gap = implied_gap(self.strike, self.spot, self.expiry,
+                                     self.ir_d, self.ir_f, self.curr_vol,
+                                     self.base_vol, up_factor)
+        else:
+            strike_gap = over_gap
+        for j in strikes: '''
+        
 
     def pre_vol_smile(self, num_k=10, up_factor=88.8, plot=True, over_gap=88.8):
         ''' takes strike w/ its pre and post vols used to create Event
