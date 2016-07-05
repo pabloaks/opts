@@ -1,6 +1,7 @@
 import basic_pricer as bp
 from math import *
 import matplotlib.pyplot as plt
+from Vol_Market import Skew
 
 ## big question about bumping spot or strike, theoretically should be
 ## bumping spot but then results are "tricky", not even... but then
@@ -21,7 +22,7 @@ import matplotlib.pyplot as plt
 ## this way everything is more balanced
 ## a 5% move is the same for a 95 strike and a 105 strike when spot is 100
 
-def implied_gap(k, spot, expiry, ir_d, ir_f, curr_v, base_v, up_fact=1.0):
+def implied_gap(k, s, expiry, ird, irf, curr_v, base_v, up_f=1.0):
     ''' will bump the strike by the event gap, instead of the spot, this
     way there is no need to worry about the currency of the p/l, since
     spot is not moving need to think about this about more but otherwise
@@ -29,23 +30,22 @@ def implied_gap(k, spot, expiry, ir_d, ir_f, curr_v, base_v, up_fact=1.0):
     up factor = magnitude move up / magnitude move down
     returns magnitude of move down
     '''
-    p_u = 1.0 / (1.0 + up_fact)
+    p_u = 1.0 / (1.0 + up_f)
     p_d = 1.0 - p_u
-    curr_prem = bp.bs_str(spot, k, curr_v, expiry, ir_d, ir_f)
+    curr_prem = bp.bs_str(s, k, curr_v, expiry, ird, irf)
     gap_low = 0.0
-    gap_high = curr_v*sqrt(3.0*expiry/pi)*1.1*max(1,1.0/up_fact)
+    gap_high = curr_v*sqrt(3.0*expiry/pi)*1.1*max(1,1.0/up_f)
     ## for low strikes can potentially pass a -ve strike in bs_str()
     ## for very high up_factor, so need to be careful,
     ## and way to control it is with gap_high /// (looks ok now)
     mid_gap = (gap_low + gap_high) / 2.0
     epsilon = 0.000000001
     i = 0
-    while ((gap_high - gap_low) >= epsilon) and i < 100:
+    while gap_high - gap_low >= epsilon and i < 100:
         mid_gap = (gap_low + gap_high) / 2.0
-        temp_prem = (bp.bs_str(spot, k*(1+mid_gap), base_v, expiry, ir_d, ir_f)
-                     *p_d +
-                     p_u*bp.bs_str(spot, k*(1-mid_gap*up_fact), base_v, expiry,
-                                   ir_d, ir_f))
+        prem_dn = bp.bs_str(s, k*(1 + mid_gap), base_v, expiry, ird, irf)
+        prem_up = bp.bs_str(s, k*(1 - mid_gap*up_f), base_v, expiry, ird, irf)
+        temp_prem = prem_dn*p_d + prem_up*p_u
         if temp_prem > curr_prem:
             gap_high = mid_gap
         else:
@@ -86,31 +86,70 @@ def implied_gap_skew(k, curr_v, post_skew, up_fact=1.0):
         i += 1
     return mid_gap
 
-def post_vol(k, spot, expiry, ir_d, ir_f, pre_v, egap, up_fact=1.0):
+def post_vol(k, spot, expiry, ird, irf, pre_v, egap, up_f=1.0):
     ''' calculates post vol
     '''
+    ## not sure temp_prem is monotonic fn of vol
+    ## for big gaps post_vol doesnt always match
+    ## unstable solutions so get some errors
     ## need to add check for prem(pre_v) > gap
-    p_u = 1.0 / (1.0 + up_fact)
+    p_u = 1.0 / (1.0 + up_f)
     p_d = 1.0 - p_u
-    prem_b = bp.bs_str(spot, k, pre_v, expiry, ir_d, ir_f)
+    prem_b = bp.bs_str(spot, k, pre_v, expiry, ird, irf)
     vol_low = 0.0
     vol_high = 10*pre_v
     mid_vol = (vol_low + vol_high) / 2.0
     epsilon = 0.000000001
     i = 0
-    while ((vol_high - vol_low) >= epsilon) and i < 100:
+    while vol_high - vol_low >= epsilon and i < 100:
         mid_vol = (vol_low + vol_high) / 2.0
-        temp_prem = (bp.bs_str(spot, k*(1 + egap), mid_vol, expiry, ir_d, ir_f)
-                     *p_d +
-                     p_u*bp.bs_str(spot, k*(1 - egap*up_fact), mid_vol, expiry,
-                                   ir_d, ir_f))
+        prem_dn = bp.bs_str(spot, k*(1 + egap), mid_vol, expiry, ird, irf)
+        prem_up = bp.bs_str(spot, k*(1 - egap*up_f), mid_vol, expiry, ird, irf)
+        temp_prem =  prem_dn*p_d + prem_up*p_u
         if temp_prem > prem_b:
             vol_high = mid_vol
         else:
             vol_low = mid_vol
         i += 1
     return mid_vol
-    
+
+def post_vol_skew(k, post_s, pre_v, egap, up_f=1.0):
+    ## will solve for skew keeping rr and fly from post_s
+    ## need to strip post_s and get low_vol for bisection
+    rr25 = post_s.rr_25
+    rr10 = post_s.rr_10
+    fly25 = post_s.fly_25
+    fly10 = post_s.fly_10
+    vol_low = max(0, rr25/2 - fly25, rr10/2 - fly10, - rr25/2 - fly25,
+                  - rr10/2 - fly10) + 0.0025
+    vol_high = 10*pre_v
+    p_u = 1.0 / (1.0 + up_f)
+    p_d = 1.0 - p_u
+    s = post_s.spot
+    expiry = post_s.expiry
+    ird = post_s.ir_d
+    irf = post_s.ir_f
+    prem_b = bp.bs_str(s, k, pre_v, expiry, ird, irf)
+    mid_vol = (vol_low + vol_high) / 2.0
+    mid_skew = Skew(s, expiry, ird, irf, mid_vol, rr25, rr10, fly25, fly10)
+    epsilon = 0.000000001
+    i = 0
+    while vol_high - vol_low >= epsilon and i < 100:
+        mid_vol = (vol_low + vol_high) / 2.0
+        mid_skew = Skew(s, expiry, ird, irf, mid_vol, rr25, rr10, fly25, fly10)
+        k_up = k*(1 - egap*up_f)
+        k_dn = k*(1 + egap)
+        vol_up = mid_skew.get_vol(k_up)
+        vol_dn = mid_skew.get_vol(k_dn)
+        prem_up = bp.bs_str(s, k_up, vol_up, expiry, ird, irf)
+        prem_dn = bp.bs_str(s, k_dn, vol_dn, expiry, ird, irf)
+        temp_prem = prem_dn*p_d + prem_up*p_u
+        if temp_prem > prem_b:
+            vol_high = mid_vol
+        else:
+            vol_low = mid_vol
+        i += 1
+    return mid_vol
 
 def gap_vol(k, spot, expiry, ir_d, ir_f, base_v, egap, up_fact=1.0):
     ''' calculates pre vol assuming we know gap and post vol 
