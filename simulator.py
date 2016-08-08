@@ -32,5 +32,3 @@ def rand_sim(spot,vol,start,end, num):
     return prices
    
 
-print('hi')
-
