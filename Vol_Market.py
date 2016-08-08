@@ -1,7 +1,6 @@
 import basic_pricer as bp
 import numpy as np
 from math import *
-import Event_Gap
 import matplotlib.pyplot as plt
 
 class Skew(object):
@@ -178,4 +177,4 @@ class Vol_mkt(object):
             mkt_info += '%5.2f\t%5.2f\t%5.2f\n' \
                         %(self.fly_10[i]*100, self.ir_d[i]*100,
                           self.ir_f[i]*100)
-        return header+ mkt_info
+        return header + mkt_info

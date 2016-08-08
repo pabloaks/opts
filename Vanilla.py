@@ -1,22 +1,34 @@
 import basic_pricer as bp
 import backtest
 import matplotlib.pyplot as plt
+import datetime
 from math import *
 
 class Van(object):
     'BS Vanilla option pricing'
 
-    def __init__(self, spot, strike, vol, expiry, is_call=True, ir_d=0.0,
-                 ir_f=0.0, is_prem_for=False):
+    def __init__(self, spot, strike, vol, start_date, end_date, is_call=True,
+                 ir_d=0.0, ir_f=0.0, is_prem_for=False):
+        self.yr_base = datetime.timedelta(365, 0, 0)
         self.spot = spot
         self.strike = strike
         self.vol = vol
-        self.expiry = expiry
+        self.start_date = start_date
+        self.end_date = end_date
+        self.set_expiry()
         self.is_call = is_call
         self.ir_d = ir_d
         self.ir_f = ir_f
         self.is_prem_for = is_prem_for
-        self.fwd = spot * bp.df(ir_d,expiry) / bp.df(ir_f,expiry)
+        self.fwd = spot * bp.df(ir_d, self.expiry) / bp.df(ir_f, self.expiry)
+
+    def set_expiry(self, st_dt=88.8):
+        if st_dt==88.8:
+            self.expiry = (self.end_date - self.start_date) / self.yr_base
+            return
+        else:
+            self.expiry = (self.end_date - st_dt) / self.yr_base
+            return
 
     def bs_price(self):
         return bp.bs_price(self.spot, self.strike, self.vol, self.expiry,
@@ -91,22 +103,22 @@ class Van(object):
 
 class Realized(object):
 
-    def __init__(self, spot_series, start, end, ir_d=0.0, ir_f=0.0):
+    def __init__(self, spot_series, start_date, end_date, ir_d=0.0, ir_f=0.0):
         self.spot_series = spot_series
-        self.start = start
-        self.end = end
+        self.start = start_date
+        self.end = end_date
+        self.expiry = (end_date - start_date) / datetime.timedelta(365, 0, 0)
         self.ir_d = ir_d
         self.ir_f = ir_f
 
     def real_pl(self, notional, strike, vol, hedge_vol, is_call=True):
         return backtest.realized_pl(self.spot_series, notional, strike, vol,
-                                    self.start - self.end, self.ir_d, self.ir_f,
+                                    self.expiry, self.ir_d, self.ir_f,
                                     hedge_vol, is_call)
 
     def be_vol(self, strike, hedge_vol, is_call = True):
         return backtest.breakeven_vol(self.spot_series, strike, hedge_vol,
-                                      self.start - self.end, self.ir_d,
-                                      self.ir_f)
+                                      self.expiry, self.ir_d, self.ir_f)
 
     def be_curve(self, low_k, high_k, hedge_vol, num_k=20, plots=True):
         curve_dict = {}
@@ -200,5 +212,5 @@ class Realized(object):
         return (strikes,vv)
 
     def real_vol(self):
-        rv = bp.realized_vol(self.spot_series, self.start, self.end)
+        rv = bp.realized_vol(self.spot_series, self.expiry)
         return rv
