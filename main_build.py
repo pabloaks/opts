@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import gap_event_smile as ges
 from Vol_Market import Vol_mkt
 
@@ -36,11 +38,11 @@ def main():
     # mkt info for data 
     s = 10
     k = 10
-    expiry = 2/365
-    pre_v = 0.14
+    expiry = 2/365.0
+    pre_v = 0.15
     ird = 0.0
     irf = 0.0
-    up_f = 1/2
+    up_f = 1/2.0
     # skew
     rr_25 = 1.0/100
     rr_10 = 2.0/100
@@ -50,9 +52,12 @@ def main():
     # gets post data for specific date  and strike from run
     pv_skew = postvol_run.interp_skew(expiry)
     postv_k = pv_skew.get_vol(k)
+    print(postv_k)
+    
     # build event
     ev = ges.Event(k, pre_v, pv_skew, up_f)
     ig = ev.get_implied_gap()
+    
     # build all prevol curves
     for i in range(num_curves):
         expiry = postvol_run.expiry[i]
@@ -62,6 +67,6 @@ def main():
         print('\n\n------------------------------------\n')
         print(temp_ev)
         temp_ev.pre_vol_smile()
-
+    
 if __name__ == '__main__':
     main()
