@@ -4,14 +4,14 @@ from Vol_Market import Skew, Vol_mkt
 from Event_Gap import Event, Event_Skew
 
 ## market inputs
-spot = 1.0
-strike = 1.0
-expiry = 30/365.0
+spot = 100.0
+strike = 100.0
+expiry = 1/365.0
 ir_d = 0.0
 ir_f = 0.0
 atm_vol = 0.13
-curr_vol = 0.15
-up_factor = 5.0
+curr_vol = 0.85
+up_factor = 1/3.0
 has_skew = False
 if has_skew:
     rr_25 = 1.00/100
@@ -59,10 +59,10 @@ if False:
 if False:
     ' test event gap, just checking functions '
     ' no skew '
-    print('\nTEST formulas for event gap w/now skew')
+    print('\nTEST formulas for event gap w/no skew')
     eg1 = Event_Gap.implied_gap(strike, spot, expiry, ir_d, ir_f, curr_vol, atm_vol)
     print('%.4f%%'%(100*eg1))
-    up_factor = 2.0
+    up_factor = 1.0/3.0
     eg2 = Event_Gap.implied_gap(strike, spot, expiry, ir_d, ir_f, curr_vol, atm_vol, up_factor)
     print('down gap: \t%.4f%% \nup gap: \t%.4f%%'%(100*eg2, up_factor*100*eg2))
     EM = 2*up_factor*eg2/(1+up_factor)
@@ -73,10 +73,10 @@ if False:
     print('\npre vol: %.2f%% \ncurr vol: %.2f%%'%(100*pre_vol2, 100*curr_vol))
 
     print('\n\nTEST formulas for event gap w/skew')
-    up_factor = 2.0
+    up_factor = 1.0
     eg3 = Event_Gap.implied_gap_skew(strike, curr_vol, t1)
     print('%.4f%%'%(100*eg3))
-    up_factor = 2.0
+    up_factor = 1.0
     eg4 = Event_Gap.implied_gap_skew(strike, curr_vol, t1, up_factor)
     print('down gap: \t%.4f%% \nup gap: \t%.4f%%'%(100*eg4, up_factor*100*eg4))
     EM = 2*up_factor*eg4/(1+up_factor)
@@ -103,15 +103,15 @@ if False:
     ev2.pre_vol_smile()
     ev1.gap_smile()
     ev2.gap_smile()
-    ev1.compare_factor([1,2,1/3.0])
-    ev2.compare_factor([1,2,1/3.0])
+    ev1.compare_factor([1/2.0,1/4.0,1/3.0])
+    ev2.compare_factor([1/2.0,1/4.0,1/3.0])
     print('\n')
     print(ev1)
     print('\n\n')
     print(ev2)
 
 ' test vol market and interp in there '
-if True:
+if False:
     spot = 1.00
     strike = 1.00
     expiry = 10/365.0
@@ -135,3 +135,10 @@ if True:
     t2 = mm.interp_skew(7/365)
     print(t2)
     print(mm)
+
+' test post_vol function '
+if True:
+    igap = Event_Gap.implied_gap(strike,spot,expiry,ir_d,ir_f,curr_vol, atm_vol)
+    print(igap)
+    postv = Event_Gap.post_vol(strike, spot, expiry, ir_d, ir_f, curr_vol, igap)
+    print(postv)

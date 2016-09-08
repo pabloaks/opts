@@ -90,19 +90,16 @@ def realized_pl_end(spot_series, notional, strike, vol, st_dt, ed_dt, rate_dom,
                                               st_dt, is_call, rate_dom,
                                               rate_for, False)
     if ed_dt == 0:
-        if is_call:
-            op_payout = max(0, spot_series[-1] - strike) * notional / \
-                        spot_series[-1]
-        else:
-            op_payout = max(0, strike - spot_series[-1]) * notional / \
-                        spot_series[-1]
-    else:
-        df_dom = bp.df(rate_dom, ed_dt)
-        op_payout = notional / df_dom * bp.bs_price(spot_series[-1], strike,
-                                                    sell_vol, ed_dt, is_call,
-                                                    rate_dom, rate_for, False)
+        pp = realized_pl(spot_series, notional, strike, vol, st_dt, rate_dom,
+                         rate_for, hedge_vol, is_call)
+        return pp
+
+    df_dom = bp.df(rate_dom, ed_dt)
+    op_payout = notional / df_dom * bp.bs_price(spot_series[-1], strike,
+                                                sell_vol, ed_dt, is_call,
+                                                rate_dom, rate_for, False)
     
-    for i in range(1, num_spot+1):
+    for i in range(1, num_spot + 1):
         temp_exp = term * (num_spot - i) / (num_spot - 1) + ed_dt
         fwd_factor = bp.df(rate_dom, temp_exp) / bp.df(rate_for, temp_exp)
         temp_delta = bp.bs_delta(spot_series[i-1], strike, hedge_vol, temp_exp,
@@ -132,16 +129,15 @@ def breakeven_vol_end(spot_series, strike, hedge_vol, st_dt, ed_dt, rate_dom,
         sell_vol = hedge_vol
 
     if ed_dt == 0:
-        if is_call:
-            op_payout = max(0, spot_series[-1] - strike) / spot_series[-1]
-        else:
-            op_payout = max(0, strike - spot_series[-1]) / spot_series[-1]
-    else:
-        df_dom = bp.df(rate_dom, ed_dt)
-        op_payout = bp.bs_price(spot_series[-1], strike, sell_vol, ed_dt,
+        be = breakeven_vol(spot_series, strike, hedge_vol, st_dt, rate_dom,
+                           rate_for)
+        return be
+
+    df_dom = bp.df(rate_dom, ed_dt)
+    op_payout = bp.bs_price(spot_series[-1], strike, sell_vol, ed_dt,
                                 is_call, rate_dom, rate_for, False) / df_dom
 
-    for i in range(1, num_spot):
+    for i in range(1, num_spot + 1):
         temp_exp = term * (num_spot - i) / (num_spot - 1) + ed_dt
         fwd_factor = bp.df(rate_dom, temp_exp) / bp.df(rate_for, temp_exp)
         temp_delta = bp.bs_delta(spot_series[i-1], strike, hedge_vol, temp_exp,

@@ -72,6 +72,7 @@ class Event(object):
         self.irf = irf
         self.fwd = s * bp.df(ird, expiry) / bp.df(irf, expiry)
         self.imp_gap = self.get_implied_gap()
+        self.vol_f = post_up/post_dn
 
     def get_implied_gap(self, up_f=88.8):
         if up_f == 88.8:
@@ -80,8 +81,83 @@ class Event(object):
                            self.pre_vol, self.post_up, self.post_dn, up_f)
         return (temp, temp*up_f)
 
+    def prevol_run(self):
+        put10 = self.get_pre_vol_k(self.get_pre_strike(0.10, False))
+        put25 = self.get_pre_vol_k(self.get_pre_strike(0.25, False))
+        call25 = self.get_pre_vol_k(self.get_pre_strike(0.25, True))
+        call10 = self.get_pre_vol_k(self.get_pre_strike(0.10, True))
+        atmf = self.get_pre_vol_k(self.fwd)
+        rr25 = call25 - put25
+        rr10 = call10 - put10
+        fly25 = (call25 + put25)/2 - atmf
+        fly10 = (call10 + put10)/2 - atmf
+        pre_skew = vm.Skew(self.s, self.expiry, self.ird, self.irf, atmf, rr25,
+                           rr10, fly25, fly10)
+        return pre_skew
 
+    def get_pre_vol_k(self, k):
+        return pre_vol(k, self.s, self.expiry, self.ird, self.irf, self.post_up,
+                       self.post_dn, self.imp_gap[0], self.up_f)
 
+    def get_pre_vol(self, gap, up_f=88.8):
+        if up_f == 88.8:
+            up_f = self.up_f
+        return pre_vol(self.k, self.s, self.expiry, self.ird, self.irf,
+                       self.post_up, self.post_dn, gap, up_f)
+
+    def get_post_vol(self, gap, up_f=88.8, vol_f=88.8):
+        if up_f == 88.8:
+            up_f = self.up_f
+        if vol_f == 88.8:
+            vol_f = self.vol_f
+        return post_vol(self.k, self.s, self.expiry, self.ird, self.irf,
+                        self.pre_vol, self.gap, vol_f, up_f)
+
+    def get_pre_strike(self, delta, is_call=True):
+        ' get strike pre-event for given delta '
+        low_k = max(0, self.fwd*(1 - 5*self.pre_vol*sqrt(self.expiry)))
+        high_k = self.fwd*(1 + 5*self.pre_vol*sqrt(self.expiry))
+        epsilon = 0.000001
+        i = 0
+        mid_k = (high_k + low_k)/2
+        while high_k - low_k >= epsilon and i < 100:
+            mid_k = (high_k + low_k)/2
+            vol_mid = self.get_pre_vol_k(mid_k)
+            mid_delta = abs(bp.bs_delta(self.s, mid_k, vol_mid, self.expiry,
+                                        is_call, self.ird, self.irf))
+            if (mid_delta > delta):
+                if is_call:
+                    low_k = mid_k
+                else:
+                    high_k = mid_k
+            else:
+                if is_call:
+                    high_k = mid_k
+                else:
+                    low_k = mid_k
+            i += 1
+        return mid_k
+
+    def post_vol_smile(self, num_k=10, up_f=88.8, plot=True, over_gap=88.8,
+                       volf_f=88.8):
+        low_k = self.fwd*(1 - 2*self.pre_vol*sqrt(self.expiry))
+        inc = (self.fwd - low_k)/num_k
+        strikes = []
+        vols = []
+        if up_f == 88.8:
+            up_f = self.up_f
+        if vol_f == 88.8:
+            vol_f = self.vol_f
+        for i in range(num_k*2 + 1):
+            strikes.append(low_k + inc*i)
+        if over_gap == 88.8:
+            strike_gap = implied_gap(self.k, self.s, self.expiry, self.ird,
+                                     self.irf, self.pre_vol, self.post_dn*vol_f,
+                                     self.post_dn, up_f)
+
+        implied_gap(k, s, expiry, ird, irf, pre_v, post_up, post_dn, up_f=1.0)
+        
+        
 
 
 
