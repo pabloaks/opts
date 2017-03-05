@@ -1,5 +1,5 @@
-import basic_pricer as bp
-import backtest
+from tool import basic_pricer as bp
+from tool import backtest
 import matplotlib.pyplot as plt
 import datetime
 from math import *
@@ -155,7 +155,7 @@ class Realized(object):
         ''' dont need to pass strike limits,
         auto calculated depending on vol and series
         '''
-        expiry = self.start - self.end
+        expiry = self.expiry
         low_k = min(self.spot_series[0]*(1 - 2*hedge_vol*sqrt(expiry)),
                     min(self.spot_series)*0.99)
         high_k = max(self.spot_series[0]*(1 + 2*hedge_vol*sqrt(expiry)),
