@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 from Vanilla import Van, Realized
 import basic_pricer
 import matplotlib.pyplot as plt
@@ -10,15 +12,23 @@ import datetime
  hedging happens at the same vol it is simulated (so expected value should be zero)
  prices are simulated under BS assumptions (normal returns) '''
 
+def load_prices(filename):
+    f = open(filename, 'rU')
+    prices = []
+    for price in f:
+        prices.append(float(price))
+    f.close()
+    return prices
+
 spot = 1.00
 vol = 0.15
 hedge_vol = 0.15
 st_dt = datetime.datetime.now()
-ed_dt = st_dt + datetime.timedelta(5, 0, 0)
+ed_dt = st_dt + datetime.timedelta(1, 0, 0)
 expiry = (ed_dt - st_dt) / datetime.timedelta(365, 0, 0)
 notional = 1000000.00
 hedge_day = 144
-num_sims = 1000
+num_sims = 50000
 ir_d = ir_f = 0.0
 
 if False:
@@ -42,19 +52,19 @@ if False:
 
 ''' now I want to simulate different hedgevol '''
 
-if False:
-    strike = basic_pricer.bs_strike(spot,0.25,vol,expiry)
+if True:
+    strike = basic_pricer.bs_strike(spot,0.5,vol,expiry)
     call1 = Van(spot, strike, vol, st_dt, ed_dt)
     hv = 0.10
     hvs = []
     bevols = []
-    while hv < 0.21:
-        print(hv)
-        res = np.array(call1.sim_vol(simulator.rand_sim,num_sims, hedge_day, hv))
+    while hv < 0.2001:
+        print('\nhedge vol: %4.2f%%'%(100*hv))
+        res = np.array(call1.sim_pl(simulator.rand_sim,num_sims, hedge_day, notional, hv))
         print('mean: %8.4f ' %(np.mean(res)))
         print('stdev: %7.4f '%(np.std(res)))
         hvs.append(hv)
-        bevols.append(np.std(res))
+        bevols.append(np.mean(res))
         label1 = 'hvol:%3.1f%%  mean:%4.2f  std:%4.2f'%(hv*100, np.mean(res),np.std(res))
         hv += 0.05
         plt.hist(res,bins=60,normed=1,alpha=0.5,label=label1)
@@ -62,11 +72,13 @@ if False:
     plt.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3, ncol=3, mode="expand", borderaxespad=0.)
     plt.show()
 
-if True:
+if False:
     for i in range(0,1):
         prices = simulator.rand_sim(spot,vol,expiry, 0.00, int(365*expiry)*hedge_day)
+        prices = load_prices('sim_prices.txt')
         low_strike = min(prices[0]*(1-1.0*hedge_vol*sqrt(expiry)),min(prices)*0.99)
         high_strike = max(prices[0]*(1+1.0*hedge_vol*sqrt(expiry)),max(prices)*1.01)
         day1 = Realized(prices,st_dt, ed_dt, ir_d, ir_f)
         dd = day1.be_curve_mult_vol(low_strike, high_strike, hedge_vol, 30)
+
 

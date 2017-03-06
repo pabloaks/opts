@@ -1,7 +1,7 @@
-import basic_pricer as bp
+from opts import basic_pricer as bp
 from math import *
 import matplotlib.pyplot as plt
-import Vol_Market
+#import Vol_Market
 
 def implied_gap(k, s, expiry, ird, irf, pre_v, post_v, up_f=1.0):
     ''' will bump the strike by the event gap, instead of the spot, this

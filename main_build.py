@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-
+#!/usr/bin/env python3
 import gap_event_smile as ges
 from Vol_Market import Vol_mkt
 
@@ -53,7 +52,7 @@ def main():
     pv_skew = postvol_run.interp_skew(expiry)
     postv_k = pv_skew.get_vol(k)
     print(postv_k)
-    
+    '''
     # build event
     ev = ges.Event(k, pre_v, pv_skew, up_f)
     ig = ev.get_implied_gap()
@@ -67,6 +66,6 @@ def main():
         print('\n\n------------------------------------\n')
         print(temp_ev)
         temp_ev.pre_vol_smile()
-    
+    '''
 if __name__ == '__main__':
     main()
